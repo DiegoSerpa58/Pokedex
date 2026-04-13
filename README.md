@@ -82,17 +82,22 @@ Para cumplir con los requisitos de seguridad se creó el archivo:
 
 - `sistemas-distribuidos/poke-dex-lab/source/pokedex-angular/staticwebapp.config.json`
 
-Con el siguiente contenido:
+Con el siguiente contenido final:
 
 ```json
 {
   "globalHeaders": {
-    "Content-Security-Policy": "default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://raw.githubusercontent.com;",
-    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://raw.githubusercontent.com https://pokeapi.co https://assets.pokemon.com https://beta.pokeapi.co; connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://beta.pokeapi.co/graphql/v1beta; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "X-XSS-Protection": "1; mode=block"
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,svg}", "/css/*", "/js/*"]
   }
 }
 ```
@@ -103,12 +108,18 @@ Con el siguiente contenido:
   Limita de dónde se pueden cargar recursos (scripts, estilos, imágenes, llamadas a APIs).  
   En este caso:
   - `default-src 'self'`
-  - Permite imágenes de cualquier origen (`img-src * data:`) porque la app consume distintos recursos.
-  - Permite estilos y fuentes de Google Fonts.
-  - Permite llamadas a la PokéAPI (`https://pokeapi.co` y `https://beta.pokeapi.co`) y a `raw.githubusercontent.com`.
+  - `script-src 'self' 'unsafe-inline'` para permitir los scripts inline que ya trae la aplicación original, evitando errores en la consola.
+  - Estilos y fuentes:
+    - `style-src` / `style-src-elem` permiten estilos inline y `https://fonts.googleapis.com`.
+    - `font-src` permite `self`, `https://fonts.gstatic.com` y `data:`.
+  - Imágenes limitadas a:
+    - `self`, `data:`, `https://raw.githubusercontent.com`, `https://pokeapi.co`, `https://assets.pokemon.com`, `https://beta.pokeapi.co`.
+  - Conexiones (`connect-src`) limitadas a PokéAPI y su endpoint GraphQL.
+  - Otros refuerzos:
+    - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
 
 - **Strict-Transport-Security**  
-  Obliga al navegador a usar **HTTPS** durante 2 años y para subdominios (`includeSubDomains`).
+  Obliga al navegador a usar **HTTPS** durante 1 año y para subdominios (`includeSubDomains; preload`).
 
 - **X-Content-Type-Options: nosniff**  
   Evita que el navegador intente adivinar el tipo de contenido (previene ataques basados en MIME sniffing).
@@ -124,6 +135,10 @@ Con el siguiente contenido:
   - `geolocation`
   - `microphone`
   - `camera`
+  - `payment`
+
+- **X-XSS-Protection**  
+  Activa el filtro XSS heredado en navegadores que todavía lo soportan (`1; mode=block`).
 
 ---
 
@@ -131,16 +146,18 @@ Con el siguiente contenido:
 
 Se utilizó [securityheaders.com](https://securityheaders.com/) para validar los encabezados.
 
-- **Calificación final:** **A**
+- **Calificación estable usada en producción:** **A**
 - Encabezados en verde:
-  - `Strict-Transport-Security`
-  - `Referrer-Policy`
-  - `X-Content-Type-Options`
   - `Content-Security-Policy`
+  - `Strict-Transport-Security`
+  - `X-Content-Type-Options`
   - `X-Frame-Options`
+  - `Referrer-Policy`
   - `Permissions-Policy`
-- Solo queda una *warning* porque en CSP se usa `'unsafe-inline'` en scripts y estilos, necesario para compatibilidad con el código del laboratorio.  
-  Aun así, la calificación es A.
+  - `X-XSS-Protection`
+
+Durante las pruebas se endureció la `Content-Security-Policy` eliminando `'unsafe-inline'` de `script-src` (dejando `script-src 'self'`), lo que permitió alcanzar momentáneamente una calificación **A+** en securityheaders.com.  
+Sin embargo, esa política tan estricta bloqueaba scripts y manejadores de eventos inline que usa la aplicación original y generaba mensajes de error CSP en la consola del navegador. Para cumplir con el requisito del laboratorio de **no tener errores en la consola**, se decidió volver a una versión ligeramente más permisiva de la CSP (permitiendo inline scripts de forma controlada con `'unsafe-inline'`), manteniendo la calificación **A** en securityheaders y una consola completamente limpia.
 
 ---
 
@@ -157,8 +174,9 @@ Al principio la CSP bloqueaba:
 Se ajustó la cabecera CSP en `staticwebapp.config.json` para permitir:
 
 - `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
-- `font-src 'self' https://fonts.gstatic.com`
-- `connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://raw.githubusercontent.com`
+- `style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com`
+- `font-src 'self' https://fonts.gstatic.com data:`
+- `connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://beta.pokeapi.co/graphql/v1beta`
 
 Con esto la Pokédex volvió a funcionar correctamente en Azure.
 
@@ -239,10 +257,12 @@ Esto confirma que, además de los encabezados HTTP de seguridad configurados en 
    - `X-Content-Type-Options: nosniff` evita que el navegador interprete archivos con un tipo de contenido diferente al declarado (previniendo ciertos ataques basados en MIME).  
    - `X-Frame-Options: DENY` protege contra ataques de clickjacking al impedir que la aplicación se cargue dentro de iframes externos.  
    - `Referrer-Policy: no-referrer` minimiza la fuga de información sensible en la cabecera `Referer`.  
-   - `Permissions-Policy` restringe el acceso a APIs del navegador (geolocalización, cámara, micrófono) que la aplicación no necesita, reduciendo la superficie de ataque.
+   - `Permissions-Policy` restringe el acceso a APIs del navegador (geolocalización, cámara, micrófono, pago) que la aplicación no necesita, reduciendo la superficie de ataque.  
+   - `X-XSS-Protection` activa el filtro XSS heredado en navegadores antiguos que todavía lo soportan.
 
 2. **¿Qué aprendiste sobre la relación entre despliegue y seguridad web?**  
    Aprendí que desplegar una aplicación no es solo “subir archivos”, sino configurar correctamente el entorno de producción. Pequeñas diferencias entre `environment.ts` y `environment.prod.ts` (como la ruta de `imagesPath`) pueden generar errores solo en la nube. También vi que la seguridad se configura a nivel de servidor o plataforma (en este caso Azure Static Web Apps) mediante encabezados HTTP, y que herramientas como *securityheaders.com* y *SSL Labs* permiten validar rápidamente si estas protecciones están bien aplicadas.
 
 3. **¿Qué desafíos encontraste en el proceso?**  
-   El principal desafío fue depurar errores que solo aparecían en producción: primero la CSP bloqueaba fuentes y llamadas a la PokéAPI, provocando una pantalla de error 500 en la Pokédex. Luego aparecían errores 404 de imágenes porque en producción `imagesPath` apuntaba a `/pokedex-angular/assets/images`, mientras que las imágenes reales estaban en `/assets/images`. Resolverlo me obligó a usar la consola del navegador (pestañas Network y Console), revisar el código fuente en GitHub y entender cómo Azure construye las rutas de los recursos estáticos. Al final, logré una aplicación funcional, con encabezados de seguridad y sin errores en consola, y validada además con A en SecurityHeaders y A+ en SSL Labs.
+   El principal desafío fue depurar errores que solo aparecían en producción: primero la CSP bloqueaba fuentes y llamadas a la PokéAPI, provocando una pantalla de error 500 en la Pokédex. Luego aparecieron errores 404 de imágenes porque en producción `imagesPath` apuntaba a `/pokedex-angular/assets/images`, mientras que las imágenes reales estaban en `/assets/images`.  
+   Además, al intentar endurecer aún más la CSP para llegar a **A+** en securityheaders, se bloquearon scripts inline y aparecieron errores CSP en la consola. Esto obligó a encontrar un equilibrio entre seguridad y funcionalidad, ajustando la política para mantener una nota **A** en securityheaders pero con la consola totalmente limpia. Al final, la aplicación quedó funcional, con encabezados de seguridad sólidos, A en SecurityHeaders y A+ en SSL Labs.
