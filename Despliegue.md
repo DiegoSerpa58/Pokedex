@@ -88,17 +88,22 @@ En la raíz del proyecto Angular:
 sistemas-distribuidos/poke-dex-lab/source/pokedex-angular/staticwebapp.config.json
 ```
 
-Contenido:
+Contenido final:
 
 ```json
 {
   "globalHeaders": {
-    "Content-Security-Policy": "default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://raw.githubusercontent.com;",
-    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://raw.githubusercontent.com https://pokeapi.co https://assets.pokemon.com https://beta.pokeapi.co; connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://beta.pokeapi.co/graphql/v1beta; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "X-XSS-Protection": "1; mode=block"
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,svg}", "/css/*", "/js/*"]
   }
 }
 ```
@@ -108,27 +113,37 @@ Este archivo se versiona en GitHub y es leído automáticamente por Azure Static
 ### 3.2. Propósito de cada header
 
 - **Content-Security-Policy**  
-  Protege contra XSS y control de carga de recursos.  
-  Se permite:
-  - Recursos propios (`'self'`).
-  - Imágenes de cualquier origen (`img-src * data:`).
-  - Estilos y fuentes desde Google Fonts.
-  - Fetch/GraphQL a la PokéAPI y recursos de `raw.githubusercontent.com`.
+  Protege contra XSS y controla la carga de recursos.
+
+  - `default-src 'self'`: solo el mismo origen por defecto.
+  - `script-src 'self' 'unsafe-inline'`: permite scripts del mismo origen y scripts inline que la aplicación original ya utiliza (evitando errores CSP en consola).
+  - `style-src` / `style-src-elem`: permiten estilos inline y estilos desde `https://fonts.googleapis.com`.
+  - `font-src`: `self`, `https://fonts.gstatic.com` y `data:`.
+  - `img-src`: `self`, `data:`, `https://raw.githubusercontent.com`, `https://pokeapi.co`, `https://assets.pokemon.com`, `https://beta.pokeapi.co`.
+  - `connect-src`: solo `self`, `https://pokeapi.co`, `https://beta.pokeapi.co` y el endpoint GraphQL.
+  - `object-src 'none'`: bloquea objetos tipo `<object>`, `<embed>`, `<applet>`.
+  - `base-uri 'self'`: evita cambiar la base de la URL con `<base>`.
+  - `form-action 'self'`: solo permite enviar formularios al mismo origen.
+  - `frame-ancestors 'none'`: impide que la app se embelezca en iframes (clickjacking).
+  - `upgrade-insecure-requests`: fuerza a pasar peticiones HTTP a HTTPS cuando sea posible.
 
 - **Strict-Transport-Security**  
-  Fuerza el uso de HTTPS y permite precarga (preload).
+  Fuerza el uso de HTTPS con `max-age=31536000` (1 año), `includeSubDomains` y `preload`.
 
 - **X-Content-Type-Options: nosniff**  
   Evita que el navegador interprete archivos con un tipo de contenido diferente al declarado.
 
 - **X-Frame-Options: DENY**  
-  Impide que otros sitios inserten la app en un iframe (clickjacking).
+  Impide que otros sitios inserten la app en un iframe.
 
 - **Referrer-Policy: no-referrer**  
   Elimina el envío del encabezado `Referer`.
 
 - **Permissions-Policy**  
-  Deshabilita APIs que no se usan: geolocalización, micrófono y cámara.
+  Deshabilita APIs que no se usan: geolocalización, micrófono, cámara y pago.
+
+- **X-XSS-Protection**  
+  Activa el filtro XSS heredado en navegadores que todavía lo soportan.
 
 ---
 
@@ -138,9 +153,9 @@ Se utilizó la herramienta:
 
 - `https://securityheaders.com/`
 
-### 4.1. Resultado final
+### 4.1. Resultado principal
 
-- **Calificación:** **A**
+- **Calificación estable en producción:** **A**
 - Encabezados presentes y en verde:
   - `Content-Security-Policy`
   - `Strict-Transport-Security`
@@ -148,11 +163,29 @@ Se utilizó la herramienta:
   - `X-Frame-Options`
   - `Referrer-Policy`
   - `Permissions-Policy`
+  - `X-XSS-Protection`
 
-Solo se muestra una advertencia (“warning”) por el uso de `'unsafe-inline'` en `script-src` y `style-src`.  
-Se mantiene por compatibilidad con el código original del laboratorio.
+### 4.2. Ajustes de CSP y relación con la consola
 
-Se guardaron capturas del reporte para la entrega.
+Durante las pruebas se endureció la `Content-Security-Policy` eliminando `'unsafe-inline'` de `script-src` (dejando `script-src 'self'`).  
+Con esa política estricta se alcanzó una calificación **A+** en securityheaders.com, pero aparecieron errores CSP en la consola del navegador:
+
+> Executing inline script violates the following Content Security Policy directive 'script-src 'self''...
+
+Esto se debe a que la aplicación original utiliza scripts y manejadores de eventos inline, que quedan bloqueados cuando se quita `'unsafe-inline'`.
+
+Para cumplir con la rúbrica del laboratorio, que exige que **no haya errores en la consola**, se decidió relajar ligeramente la directiva de scripts a:
+
+```text
+script-src 'self' 'unsafe-inline';
+```
+
+manteniendo el resto de la política restrictiva (restricciones en imágenes, conexiones, `object-src 'none'`, `frame-ancestors 'none'`, etc.).  
+Con esta configuración:
+
+- La aplicación funciona correctamente en Azure.
+- La consola del navegador queda limpia, sin errores CSP.
+- La calificación de securityheaders.com se mantiene en un nivel alto (**A**), y además se obtuvo **A+** en la auditoría independiente de SSL Labs para la configuración TLS del servidor.
 
 ---
 
@@ -169,8 +202,9 @@ En la consola aparecían mensajes como:
 
 - Modificar la cabecera CSP en `staticwebapp.config.json` para incluir:
   - `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`
-  - `font-src 'self' https://fonts.gstatic.com`
-  - `connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://raw.githubusercontent.com`
+  - `style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com`
+  - `font-src 'self' https://fonts.gstatic.com data:`
+  - `connect-src 'self' https://pokeapi.co https://beta.pokeapi.co https://beta.pokeapi.co/graphql/v1beta`
 
 Después de estos cambios la app dejó de mostrar el error 500 y la Pokédex cargó correctamente.
 
@@ -226,20 +260,41 @@ Tras este ajuste:
 
 ---
 
-## 6. Verificación final
+## 6. Desafío Maestro – Auditoría SSL con SSL Labs
+
+Como parte del desafío maestro se realizó una auditoría adicional de seguridad usando **Qualys SSL Labs** sobre la URL pública de la aplicación:
+
+- URL analizada: `https://ambitious-coast-0bf395010.6.azurestaticapps.net`
+- Herramienta: [SSL Labs – SSL Server Test](https://www.ssllabs.com/ssltest/)
+
+### 6.1. Resultados
+
+- **Calificación general:** **A+**.
+- Certificado TLS válido emitido para `*.azurestaticapps.net`.
+- Soporte de **TLS 1.3** y suites criptográficas modernas.
+- `HTTP Strict Transport Security (HSTS)` activo con duración larga.
+- Política CAA configurada correctamente para el dominio.
+
+No se detectaron vulnerabilidades críticas en la configuración SSL/TLS del servidor.  
+Esto refuerza la seguridad del canal de comunicación, complementando los encabezados HTTP configurados en `staticwebapp.config.json`.
+
+---
+
+## 7. Verificación final
 
 Después de todos los cambios:
 
 1. **Workflow de GitHub Actions:** en verde (build y deploy correctos).
 2. **Aplicación en Azure:**
-   - URL accesible.
+   - URL accesible: `https://ambitious-coast-0bf395010.6.azurestaticapps.net`
    - Listado de 151 Pokémon funcionando.
    - Navegación entre detalles sin errores.
 3. **Consola del navegador:**
    - Sin errores JavaScript.
    - Sin errores de red (404/500).
+   - Sin errores CSP con la configuración final (`script-src 'self' 'unsafe-inline'; ...`).
 4. **SecurityHeaders.com:**
-   - Calificación **A**, encabezados en verde.
+   - Calificación **A**, encabezados de seguridad correctamente configurados.
 5. **SSL Labs:**
    - Calificación **A+** en la configuración SSL/TLS del dominio de Azure.
 
