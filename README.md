@@ -233,7 +233,7 @@ Tras este cambio:
 
 Como parte del desafío maestro se realizó una auditoría adicional de seguridad usando **Qualys SSL Labs** sobre la URL pública de la aplicación:
 
-- URL analizada: `https://ambitious-coast-0bf395010.6.azurestaticapps.net`
+- URL analizada: `https://delightful-mud-0edb1be10.7.azurestaticapps.net`
 - Herramienta: [SSL Labs – SSL Server Test](https://www.ssllabs.com/ssltest/)
 
 ### Resultados principales
