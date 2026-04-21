@@ -16,7 +16,7 @@ Dentro de ellos se encuentra la **Pokédex Angular**, una aplicación web que co
 ### URL de la aplicación en producción
 
 - **Producción:**  
-  `https://ambitious-coast-0bf395010.6.azurestaticapps.net`
+  `https://delightful-mud-0edb1be10.7.azurestaticapps.net`
 
 ---
 
