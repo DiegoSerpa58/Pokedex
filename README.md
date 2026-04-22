@@ -21,6 +21,9 @@ Dentro de ellos se encuentra la **Pokédex Angular**, una aplicación web que co
 ---
 
 ## ▶️ Ejecución en local
+![Azure Static Web App - recurso creado](docs/clone.png)
+![Azure Static Web App - recurso creado](docs/clone1.png)
+
 
 Dentro de la carpeta del proyecto Angular:
 
@@ -39,7 +42,8 @@ ng serve --open
 La aplicación quedará disponible en:
 
 - `http://localhost:4200/`
-
+![Local](docs/local.png)
+![Local](docs/local1.png)
 ### Build de producción
 
 ```bash
@@ -49,6 +53,7 @@ ng build --configuration production
 El paquete generado se crea en:
 
 - `dist/pokedex-angular`
+![Producción](docs/production.png)
 
 ---
 
@@ -145,6 +150,7 @@ Con el siguiente contenido final:
 ## 🛡️ Resultados de SecurityHeaders.com
 
 Se utilizó [securityheaders.com](https://securityheaders.com/) para validar los encabezados.
+![SecurityHeaders - A](docs/A.png)
 
 - **Calificación estable usada en producción:** **A**
 - Encabezados en verde:
@@ -158,7 +164,7 @@ Se utilizó [securityheaders.com](https://securityheaders.com/) para validar los
 
 Durante las pruebas se endureció la `Content-Security-Policy` eliminando `'unsafe-inline'` de `script-src` (dejando `script-src 'self'`), lo que permitió alcanzar momentáneamente una calificación **A+** en securityheaders.com.  
 Sin embargo, esa política tan estricta bloqueaba scripts y manejadores de eventos inline que usa la aplicación original y generaba mensajes de error CSP en la consola del navegador. Para cumplir con el requisito del laboratorio de **no tener errores en la consola**, se decidió volver a una versión ligeramente más permisiva de la CSP (permitiendo inline scripts de forma controlada con `'unsafe-inline'`), manteniendo la calificación **A** en securityheaders y una consola completamente limpia.
-
+![SecurityHeaders - A+ (prueba)](docs/A+.png)
 ---
 
 ## 🐞 Errores corregidos durante el despliegue
@@ -184,6 +190,8 @@ Con esto la Pokédex volvió a funcionar correctamente en Azure.
 
 En la consola del navegador aparecía:
 
+![404](docs/404.png)
+  ![505](docs/505.png)
 ```text
 GET https://.../pokedex-angular/assets/images/pokemon-green.png 404 (Not Found)
 ```
@@ -247,6 +255,7 @@ Como parte del desafío maestro se realizó una auditoría adicional de segurida
 No se detectaron vulnerabilidades críticas relacionadas con el canal seguro (SSL/TLS).  
 Esto confirma que, además de los encabezados HTTP de seguridad configurados en `staticwebapp.config.json`, la plataforma de Azure Static Web Apps proporciona una configuración robusta de TLS por defecto.
 
+![SSL Labs A+](docs/Amas.png)
 ---
 
 ## 📌 Reflexión Técnica
