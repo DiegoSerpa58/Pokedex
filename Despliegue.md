@@ -298,6 +298,27 @@ Después de todos los cambios:
 5. **SSL Labs:**
    - Calificación **A+** en la configuración SSL/TLS del dominio de Azure.
 
+## Nota: Workflows duplicados en GitHub Actions (cambio de Static Web App)
+
+Durante el proceso se creó inicialmente una **Azure Static Web App** con una URL diferente. Posteriormente, por un error al seleccionar el **SKU** (se eligió *Standard* en lugar de *Free*), se eliminó ese recurso y se creó una nueva Static Web App en **plan Free**, lo cual generó una **nueva URL** de producción:
+
+- `https://delightful-mud-0edb1be10.7.azurestaticapps.net`
+
+Azure Static Web Apps crea automáticamente un workflow de GitHub Actions por cada recurso Static Web App.  
+Por esta razón, en el repositorio quedaron **dos workflows** en `.github/workflows/`:
+
+- Un workflow **antiguo**, asociado al recurso de Azure eliminado (su despliegue falla porque el token/recurso ya no existe).
+- Un workflow **actual**, asociado al recurso vigente (plan Free), que es el que despliega correctamente.
+
+### Decisión tomada
+
+Para mantener evidencia del proceso y del historial de despliegues, **no se eliminó** el workflow antiguo.  
+Sin embargo, para evitar ejecuciones fallidas en cada commit y mantener el repositorio limpio para evaluación, el workflow antiguo fue **deshabilitado** en GitHub (Actions → workflow viejo → Disable workflow).  
+
+De esta forma:
+- Se conserva la evidencia histórica del primer despliegue.
+- El despliegue actual funciona correctamente con el workflow vigente.
+- No se generan ejecuciones fallidas innecesarias en GitHub Actions.
 Con esto se cumplen todos los requisitos del laboratorio:
 
 - Despliegue funcional en la nube.
